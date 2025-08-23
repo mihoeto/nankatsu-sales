@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>営業管理ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-btn.active { background-color: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Section -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-gray-900">営業管理システム</h2>
+                <p class="mt-2 text-gray-600">ログインしてください</p>
+            </div>
+            
+            <div class="bg-white p-8 rounded-lg shadow-md">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">ユーザー名</label>
+                        <select id="userSelect" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください</option>
+                            <option value="admin">admin - 管理者</option>
+                            <option value="sales1">sales1 - 田中太郎 (Aチーム)</option>
+                            <option value="sales2">sales2 - 佐藤花子 (Bチーム)</option>
+                            <option value="manager1">manager1 - 山田次郎 (Aチーム)</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="login()" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        ログイン
+                    </button>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-600">
+                        <strong>ログイン情報:</strong><br>
+                        admin / sales1 / sales2 / manager1<br>
+                        <small>※パスワード不要（選択のみ）</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardSection" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <h1 class="text-2xl font-bold text-gray-900">営業管理ダッシュボード</h1>
+                    <div class="flex items-center space-x-4">
+                        <span id="currentUserDisplay" class="text-gray-700"></span>
+                        <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                            ログアウト
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-blue-600">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-8">
+                    <button onclick="showTab('dashboard')" class="nav-btn text-white px-4 py-3 hover:bg-blue-700 active" data-tab="dashboard">
+                        <i class="fas fa-chart-bar mr-2"></i>ダッシュボード
+                    </button>
+                    <button onclick="showTab('leads')" class="nav-btn text-white px-4 py-3 hover:bg-blue-700" data-tab="leads">
+                        <i class="fas fa-users mr-2"></i>リード管理
+                    </button>
+                    <button onclick="showTab('contracts')" class="nav-btn text-white px-4 py-3 hover:bg-blue-700" data-tab="contracts">
+                        <i class="fas fa-file-contract mr-2"></i>契約管理
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Dashboard Tab -->
+            <div id="dashboardTab" class="tab-content">
+                <!-- Period Selection -->
+                <div class="mb-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">集計期間設定</h3>
+                        <div class="flex items-center space-x-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">集計タイプ</label>
+                                <select id="periodType" onchange="updatePeriodOptions()" class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="monthly">月次</option>
+                                    <option value="yearly">年次</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">対象期間</label>
+                                <select id="targetPeriod" class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <!-- Options populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="pt-6">
+                                <button onclick="loadDashboard()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    更新
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-handshake text-2xl text-blue-600"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">契約件数</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="totalContracts">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-yen-sign text-2xl text-green-600"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">総売上</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="totalRevenue">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-user-plus text-2xl text-purple-600"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">新規顧客</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="newCustomers">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-users text-2xl text-orange-600"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">アクティブリード</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="activeLeads">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">担当者別現金売上</h3>
+                        <div class="mb-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="salesType" value="new" checked onchange="updateSalesRepChart()">
+                                <span class="ml-2 text-sm">新規のみ</span>
+                            </label>
+                            <label class="inline-flex items-center ml-4">
+                                <input type="radio" name="salesType" value="all" onchange="updateSalesRepChart()">
+                                <span class="ml-2 text-sm">新規＋既存</span>
+                            </label>
+                        </div>
+                        <canvas id="salesByRepChart" style="height: 300px;"></canvas>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">チーム別現金売上</h3>
+                        <div class="mb-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="teamSalesType" value="new" checked onchange="updateSalesTeamChart()">
+                                <span class="ml-2 text-sm">新規のみ</span>
+                            </label>
+                            <label class="inline-flex items-center ml-4">
+                                <input type="radio" name="teamSalesType" value="all" onchange="updateSalesTeamChart()">
+                                <span class="ml-2 text-sm">新規＋既存</span>
+                            </label>
+                        </div>
+                        <canvas id="salesByTeamChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads Tab -->
+            <div id="leadsTab" class="tab-content hidden">
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold text-gray-900">リード管理</h2>
+                            <div class="flex space-x-3">
+                                <a href="leads-management.html" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    <i class="fas fa-cog mr-2"></i>詳細管理画面
+                                </a>
+                                <button onclick="window.open('leads-management.html', '_blank')" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                    <i class="fas fa-plus mr-2"></i>新規リード追加
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4 text-center">
+                            <p class="text-gray-600 mb-4">リードの詳細な管理は専用画面で行えます</p>
+                            <a href="leads-management.html" target="_blank" 
+                               class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                リード管理画面を開く
+                            </a>
+                        </div>
+                        <div id="leadsTable">読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contracts Tab -->
+            <div id="contractsTab" class="tab-content hidden">
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold text-gray-900">契約管理</h2>
+                            <button onclick="showAddModal('contract')" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                <i class="fas fa-plus mr-2"></i>新規契約追加
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div id="contractsTable">読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Global state
+        let currentUser = null;
+        let currentTab = 'dashboard';
+        let salesRepChart = null;
+        let salesTeamChart = null;
+        let allContracts = [];
+        let allLeads = [];
+
+        // User data
+        const users = {
+            'admin': { id: 'admin', name: '管理者', team: '管理部', role: '管理者' },
+            'sales1': { id: 'sales1', name: '田中太郎', team: 'Aチーム', role: '営業' },
+            'sales2': { id: 'sales2', name: '佐藤花子', team: 'Bチーム', role: '営業' },
+            'manager1': { id: 'manager1', name: '山田次郎', team: 'Aチーム', role: 'マネージャー' }
+        };
+
+        // Period management
+        function updatePeriodOptions() {
+            const periodType = document.getElementById('periodType').value;
+            const targetPeriod = document.getElementById('targetPeriod');
+            const currentDate = new Date();
+            
+            targetPeriod.innerHTML = '';
+            
+            if (periodType === 'monthly') {
+                for (let i = 11; i >= 0; i--) {
+                    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                    const value = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                    const label = date.getFullYear() + '年' + (date.getMonth() + 1) + '月';
+                    
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    if (i === 0) option.selected = true;
+                    targetPeriod.appendChild(option);
+                }
+            } else {
+                for (let i = 4; i >= 0; i--) {
+                    const year = currentDate.getFullYear() - i;
+                    const option = document.createElement('option');
+                    option.value = year.toString();
+                    option.textContent = year + '年';
+                    if (i === 0) option.selected = true;
+                    targetPeriod.appendChild(option);
+                }
+            }
+        }
+
+        // Authentication
+        function login() {
+            const selectedUser = document.getElementById('userSelect').value;
+            if (!selectedUser) {
+                showMessage('ユーザーを選択してください', 'error');
+                return;
+            }
+
+            currentUser = users[selectedUser];
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('currentUserDisplay').textContent = `${currentUser.name} (${currentUser.team})`;
+            
+            showMessage('ログインしました', 'success');
+            
+            // Initialize
+            updatePeriodOptions();
+            loadDashboard();
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            showMessage('ログアウトしました', 'success');
+        }
+
+        // Navigation
+        function showTab(tabName) {
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // Show selected tab
+            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+            currentTab = tabName;
+
+            // Load tab data
+            switch(tabName) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'leads':
+                    loadLeads();
+                    break;
+                case 'contracts':
+                    loadContracts();
+                    break;
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
+            try {
+                showMessage('ダッシュボードを読み込み中...', 'info');
+                
+                // Load data
+                await Promise.all([loadContractsData(), loadLeadsData()]);
+                
+                // Update summary cards
+                updateSummaryCards();
+                
+                // Update charts
+                updateSalesRepChart();
+                updateSalesTeamChart();
+
+                showMessage('ダッシュボードを更新しました', 'success');
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+                showMessage('ダッシュボードの読み込みに失敗しました', 'error');
+            }
+        }
+
+        async function loadContractsData() {
+            try {
+                const response = await fetch('tables/contracts');
+                if (response.ok) {
+                    const data = await response.json();
+                    allContracts = data.data || [];
+                } else {
+                    allContracts = [];
+                }
+            } catch (error) {
+                console.log('Contracts not available:', error);
+                allContracts = [];
+            }
+        }
+
+        async function loadLeadsData() {
+            try {
+                const response = await fetch('tables/leads_new');
+                if (response.ok) {
+                    const data = await response.json();
+                    allLeads = data.data || [];
+                } else {
+                    allLeads = [];
+                }
+            } catch (error) {
+                console.log('Leads not available:', error);
+                allLeads = [];
+            }
+        }
+
+        function updateSummaryCards() {
+            const contracts = filterContractsByPeriod(allContracts);
+            
+            const totalContracts = contracts.length;
+            const totalRevenue = contracts.reduce((sum, contract) => sum + (parseFloat(contract.cash_amount) || 0), 0);
+            const newCustomers = contracts.filter(c => c.customer_type === '新規').length;
+            const activeLeads = allLeads.filter(l => l.status && !['受注', '失注'].includes(l.status)).length;
+
+            document.getElementById('totalContracts').textContent = totalContracts.toLocaleString();
+            document.getElementById('totalRevenue').textContent = '¥' + totalRevenue.toLocaleString();
+            document.getElementById('newCustomers').textContent = newCustomers.toLocaleString();
+            document.getElementById('activeLeads').textContent = activeLeads.toLocaleString();
+        }
+
+        function filterContractsByPeriod(contracts) {
+            const periodType = document.getElementById('periodType').value;
+            const targetPeriod = document.getElementById('targetPeriod').value;
+            
+            if (!targetPeriod) return contracts;
+
+            return contracts.filter(contract => {
+                if (!contract.contract_date) return false;
+                
+                const contractDate = new Date(contract.contract_date);
+                
+                if (periodType === 'monthly') {
+                    const [year, month] = targetPeriod.split('-');
+                    return contractDate.getFullYear() == year && 
+                           (contractDate.getMonth() + 1) == parseInt(month);
+                } else {
+                    return contractDate.getFullYear() == parseInt(targetPeriod);
+                }
+            });
+        }
+
+        function updateSalesRepChart() {
+            const ctx = document.getElementById('salesByRepChart').getContext('2d');
+            const contracts = filterContractsByPeriod(allContracts);
+            const salesType = document.querySelector('input[name="salesType"]:checked')?.value || 'new';
+            
+            let contractsToAnalyze = contracts;
+            if (salesType === 'new') {
+                contractsToAnalyze = contracts.filter(c => c.customer_type === '新規');
+            }
+            
+            // Group by sales rep
+            const salesData = {};
+            contractsToAnalyze.forEach(contract => {
+                const rep = contract.sales_rep || '未設定';
+                if (!salesData[rep]) salesData[rep] = 0;
+                salesData[rep] += parseFloat(contract.cash_amount) || 0;
+            });
+
+            const labels = Object.keys(salesData);
+            const values = Object.values(salesData);
+
+            if (labels.length === 0) {
+                labels.push('データなし');
+                values.push(0);
+            }
+
+            if (salesRepChart) salesRepChart.destroy();
+
+            salesRepChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '現金売上 (¥)',
+                        data: values,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSalesTeamChart() {
+            const ctx = document.getElementById('salesByTeamChart').getContext('2d');
+            const contracts = filterContractsByPeriod(allContracts);
+            const salesType = document.querySelector('input[name="teamSalesType"]:checked')?.value || 'new';
+            
+            let contractsToAnalyze = contracts;
+            if (salesType === 'new') {
+                contractsToAnalyze = contracts.filter(c => c.customer_type === '新規');
+            }
+            
+            // Group by team
+            const teamData = {};
+            contractsToAnalyze.forEach(contract => {
+                const team = contract.assigned_team || '未設定';
+                if (!teamData[team]) teamData[team] = 0;
+                teamData[team] += parseFloat(contract.cash_amount) || 0;
+            });
+
+            const labels = Object.keys(teamData);
+            const values = Object.values(teamData);
+            const colors = ['#ef4444', '#f59e0b', '#22c55e', '#a855f7', '#06b6d4'];
+
+            if (labels.length === 0) {
+                labels.push('データなし');
+                values.push(0);
+            }
+
+            if (salesTeamChart) salesTeamChart.destroy();
+
+            salesTeamChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ¥' + context.parsed.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Data loading functions
+        async function loadLeads() {
+            try {
+                // Load from new leads table
+                const response = await fetch('tables/leads_new');
+                if (response.ok) {
+                    const data = await response.json();
+                    allLeads = data.data || [];
+                    renderLeadsTable(allLeads);
+                } else {
+                    document.getElementById('leadsTable').innerHTML = '<p class="text-gray-500">リードデータの読み込みに失敗しました</p>';
+                }
+            } catch (error) {
+                console.error('Leads load error:', error);
+                document.getElementById('leadsTable').innerHTML = '<p class="text-red-500">エラー: リードを読み込めません</p>';
+            }
+        }
+
+        async function loadContracts() {
+            try {
+                await loadContractsData();
+                renderContractsTable(allContracts);
+            } catch (error) {
+                console.error('Contracts load error:', error);
+                document.getElementById('contractsTable').innerHTML = '<p class="text-red-500">エラー: 契約を読み込めません</p>';
+            }
+        }
+
+        // Table rendering functions
+        function renderLeadsTable(leads) {
+            if (!leads.length) {
+                document.getElementById('leadsTable').innerHTML = '<p class="text-gray-500">リードがありません</p>';
+                return;
+            }
+
+            const table = `
+                <div class="mb-4">
+                    <a href="leads-management.html" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        <i class="fas fa-cog mr-2"></i>詳細管理画面
+                    </a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">リードNo.</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会社名</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">担当者</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">チーム</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">営業担当</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">見込金額</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録日</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${leads.map(lead => `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lead.lead_no || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lead.company_name || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lead.contact_name || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(lead.status)}">
+                                            ${lead.status || ''}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lead.assigned_team || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lead.sales_rep || '未割当'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">¥${(lead.estimated_amount || 0).toLocaleString()}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(lead.registration_date)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('leadsTable').innerHTML = table;
+        }
+
+        function renderContractsTable(contracts) {
+            if (!contracts.length) {
+                document.getElementById('contractsTable').innerHTML = '<p class="text-gray-500">契約がありません</p>';
+                return;
+            }
+
+            const table = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会社名</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">担当営業</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">現金売上</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">新規/既存</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ランク</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">契約日</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${contracts.map(contract => `
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${contract.company_name || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contract.sales_rep || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">¥${(contract.cash_amount || 0).toLocaleString()}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.customer_type === '新規' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                            ${contract.customer_type || ''}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contract.rank || ''}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(contract.contract_date)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('contractsTable').innerHTML = table;
+        }
+
+        // Utility functions
+        function getStatusBadgeClass(status) {
+            const statusMap = {
+                '新規': 'bg-blue-100 text-blue-800',
+                'アポ済': 'bg-yellow-100 text-yellow-800',
+                '提案済': 'bg-purple-100 text-purple-800',
+                '商談中': 'bg-orange-100 text-orange-800',
+                '受注': 'bg-green-100 text-green-800',
+                '失注': 'bg-red-100 text-red-800',
+                '保留': 'bg-gray-100 text-gray-800'
+            };
+            return statusMap[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        // Modal functions
+        function showAddModal(type) {
+            if (type === 'lead') {
+                // Redirect to leads management page
+                window.open('leads-management.html', '_blank');
+            } else {
+                showMessage('契約追加機能は開発中です', 'info');
+            }
+        }
+
+        // Message system
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-100 text-green-800 border-green-300' : 
+                           type === 'error' ? 'bg-red-100 text-red-800 border-red-300' : 
+                           'bg-blue-100 text-blue-800 border-blue-300';
+            
+            messageDiv.className = `${bgColor} px-4 py-2 rounded-md shadow-md transition-opacity duration-300 border`;
+            messageDiv.textContent = message;
+            
+            document.getElementById('messages').appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize when page loads
+        window.onload = function() {
+            console.log('営業管理ダッシュボード読み込み完了');
+            updatePeriodOptions();
+        };
+    </script>
+</body>
+</html>
